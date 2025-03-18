@@ -1,0 +1,41 @@
+@font-face {
+  font-family: "DisketMono";
+  src: url(../src/fonts/DisketMono/Disket-Mono-Regular.ttf);
+}
+
+.game {
+  position: relative;
+  width: auto;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+}
+.wrapper {
+  width: 200px;
+  margin-top: 20px;
+  margin-left: 35px;
+  white-space: nowrap;
+  color: black;
+}
+.gameHeader {
+  color: black;
+  /* font-family: "DisketMono"; */
+  font-size: 26px;
+}
+
+.distance {
+  /* font-family: "DisketMono"; */
+  font-size: 18px;
+}
+
+.collisions {
+  /* font-family: "DisketMono"; */
+  font-size: 18px;
+}
+
+.road {
+  width: 100%;
+  height: 100%;
+  display: block;
+  margin-left: 90px;
+}

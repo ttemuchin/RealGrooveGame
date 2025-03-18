@@ -1,0 +1,10 @@
+.webcam1 {
+  width: 100%;
+  height: auto;
+  max-width: 580px;
+}
+
+@font-face {
+  font-family: "DisketMono";
+  src: url(../fonts/DisketMono/Disket-Mono-Regular.ttf);
+}
