@@ -4,7 +4,7 @@
 .rightCol {
   flex: 0 0 auto;
   width: 30vw;
-  height: 800px;
+  height: 100%;
   margin-top: 20px;
   margin-right: 60px;
 }

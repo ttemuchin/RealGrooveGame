@@ -37,12 +37,14 @@ const Menu: React.FC<MenuProps> = ({ setHandPosition, startGame, pauseGame, rese
     <div className={styles.menu}>
       {webcamEnabled && <MPStart setHandPosition={setHandPosition} />}
       <div className={styles.menuContent}>
-        <button onClick={handleWebcam}>{webcamEnabled ? "Disable Camera" : "Enable Camera"}</button>
-        <button onClick={handleNewGame}>New Game</button>
-        <button onClick={handlePause} disabled={!isGameStarted || gameOver}>
-          {gamePaused ? "Resume" : "Pause"}
-        </button>
-        <button>Quit</button>
+        <div className={styles.buttons}>
+          <button onClick={handleWebcam}>{webcamEnabled ? "Disable Camera" : "Enable Camera"}</button>
+          <button onClick={handleNewGame}>New Game</button>
+          <button onClick={handlePause} disabled={!isGameStarted || gameOver}>
+            {gamePaused ? "Resume" : "Pause"}
+          </button>
+          <button>Quit</button>
+        </div>
       </div>
     </div>
   );

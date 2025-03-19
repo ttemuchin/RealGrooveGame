@@ -1,5 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import React, { useEffect, useRef, useState, useImperativeHandle } from "react";
 import styles from "./GameMain.module.css";
 
 type Props = {
@@ -7,10 +8,10 @@ type Props = {
   isGameStarted: boolean;
   isGamePaused: boolean;
   setGameOver: (gameOver: boolean) => void;
+  ref: React.Ref<{ startGame: () => void; pauseGame: () => void; resetGame: () => void }>;
 };
 
-// eslint-disable-next-line react/display-name
-const CanvasGame = forwardRef((props: Props, ref) => {
+const CanvasGame: React.FC<Props> = (props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gameStarted, setGameStarted] = useState(props.isGameStarted);
   const [gamePaused, setGamePaused] = useState(props.isGamePaused);
@@ -200,7 +201,7 @@ const CanvasGame = forwardRef((props: Props, ref) => {
     };
   }, [gameOver, gameStarted, gamePaused, direction, carX, carY, ROAD_X, CELL_SIZE, CAR_SIZE, ROAD_SPEED]);
 
-  useImperativeHandle(ref, () => ({
+  useImperativeHandle(props.ref, () => ({
     startGame: () => {
       setGameStarted(true);
       setGamePaused(false);
@@ -231,6 +232,6 @@ const CanvasGame = forwardRef((props: Props, ref) => {
       <canvas ref={canvasRef} className={styles.road} />
     </div>
   );
-});
+};
 
 export default CanvasGame;
