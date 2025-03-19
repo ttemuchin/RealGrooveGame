@@ -1,14 +1,20 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import styles from "./GameMain.module.css";
 
-type Props = { handPosition: string };
+type Props = {
+  handPosition: string;
+  isGameStarted: boolean;
+  isGamePaused: boolean;
+  setGameOver: (gameOver: boolean) => void;
+};
 
-const CanvasGame: React.FC<Props> = (props) => {
+// eslint-disable-next-line react/display-name
+const CanvasGame = forwardRef((props: Props, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [gameStarted, setGameStarted] = useState(props.isGameStarted);
+  const [gamePaused, setGamePaused] = useState(props.isGamePaused);
+
   const [collisions, setCollisions] = useState(0);
   const [distance, setDistance] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -50,35 +56,16 @@ const CanvasGame: React.FC<Props> = (props) => {
         setCollisions((prev) => prev + 1);
         if (collisions + 1 >= 5) {
           setGameOver(true);
+          props.setGameOver(true);
         }
         break;
       }
     }
   };
 
-  // после обработки с управлением рук, работает с ошибками
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (gameOver) return;
-    switch (event.key) {
-      case "a":
-        setCarX((prev) => Math.max(ROAD_X, prev - CAR_SIZE));
-        break;
-      case "d":
-        setCarX((prev) => Math.min(ROAD_X + ROAD_WIDTH * CELL_SIZE, prev + CAR_SIZE));
-        break;
-      case "w":
-        setCarY((prev) => Math.max(0, prev - CAR_SIZE));
-        break;
-      case "s":
-        setCarY((prev) => Math.min(canvasRef.current!.height - CELL_SIZE, prev + CELL_SIZE));
-        break;
-    }
-  };
-
   // init
   useEffect(() => {
     const canvas = canvasRef.current!;
-    // const ctx = canvas.getContext("2d")!;
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -88,12 +75,8 @@ const CanvasGame: React.FC<Props> = (props) => {
 
     setCarX(ROAD_X + 2 * CELL_SIZE);
     setCarY(canvas.height - 2 * CELL_SIZE);
-    // для ручного управления
-    document.addEventListener("keydown", handleKeyDown);
 
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return;
   }, []);
 
   //game
@@ -102,6 +85,26 @@ const CanvasGame: React.FC<Props> = (props) => {
     const ctx = canvas.getContext("2d")!;
     let lastTime = 0;
 
+    // ошибок стало меньше при переносе в основной useEffect
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!gameOver) {
+        switch (event.key) {
+          case "a":
+            setCarX((prev) => Math.max(ROAD_X, prev - CAR_SIZE));
+            break;
+          case "d":
+            setCarX((prev) => Math.min(ROAD_X + ROAD_WIDTH * CELL_SIZE, prev + CAR_SIZE));
+            break;
+          case "w":
+            setCarY((prev) => Math.max(0, prev - CAR_SIZE));
+            break;
+          case "s":
+            setCarY((prev) => Math.min(canvasRef.current!.height - CELL_SIZE, prev + CELL_SIZE));
+            break;
+        }
+      }
+    };
+
     const update = (deltaTime: number) => {
       if (gameOver) return;
       console.log("Current direction:", direction);
@@ -109,13 +112,14 @@ const CanvasGame: React.FC<Props> = (props) => {
 
       roadOffset.current += normalizedRoadSpeed;
       setDistance((prev) => prev + normalizedRoadSpeed);
-      //   roadOffset.current += ROAD_SPEED;
-      //   setDistance((prev) => prev + ROAD_SPEED);
 
       if (roadOffset.current >= CELL_SIZE) {
         roadOffset.current = 0;
         generateObstacle();
       }
+
+      // для ручного управления
+      document.addEventListener("keydown", handleKeyDown);
 
       let targetX = carX;
       let targetY = carY;
@@ -176,18 +180,44 @@ const CanvasGame: React.FC<Props> = (props) => {
 
       update(deltaTime);
       draw();
-      if (!gameOver) animationFrameId = requestAnimationFrame(gameLoop);
+      if (!gameOver && gameStarted && !gamePaused) {
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
     };
 
-    animationFrameId = requestAnimationFrame((timestamp) => {
-      lastTime = timestamp;
-      gameLoop(timestamp);
-    });
+    if (gameStarted && !gamePaused) {
+      animationFrameId = requestAnimationFrame((timestamp) => {
+        lastTime = timestamp;
+        gameLoop(timestamp);
+      });
+    }
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        document.removeEventListener("keydown", handleKeyDown);
+      }
     };
-  }, [gameOver, direction, carX, carY, ROAD_X, CELL_SIZE, CAR_SIZE, ROAD_SPEED]);
+  }, [gameOver, gameStarted, gamePaused, direction, carX, carY, ROAD_X, CELL_SIZE, CAR_SIZE, ROAD_SPEED]);
+
+  useImperativeHandle(ref, () => ({
+    startGame: () => {
+      setGameStarted(true);
+      setGamePaused(false);
+    },
+    pauseGame: () => {
+      setGamePaused((prev) => !prev);
+    },
+    resetGame: () => {
+      setGameStarted(false);
+      setGamePaused(false);
+      setGameOver(false);
+      setCollisions(0);
+      setDistance(0);
+      obstacles.current = [];
+      roadOffset.current = 0;
+    },
+  }));
 
   return (
     <div className={styles.game}>
@@ -201,6 +231,6 @@ const CanvasGame: React.FC<Props> = (props) => {
       <canvas ref={canvasRef} className={styles.road} />
     </div>
   );
-};
+});
 
 export default CanvasGame;

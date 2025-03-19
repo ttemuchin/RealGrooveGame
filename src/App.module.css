@@ -1,9 +1,10 @@
-.gameField{
-    display: flex;
+.gameField {
+  display: flex;
 }
-.rightCol{ 
-    flex: 0 0 auto; 
-    width: 30vw; 
-    height: 400px; 
-    margin-top: 20px;
-    margin-right:60px; }
+.rightCol {
+  flex: 0 0 auto;
+  width: 30vw;
+  height: 800px;
+  margin-top: 20px;
+  margin-right: 60px;
+}
