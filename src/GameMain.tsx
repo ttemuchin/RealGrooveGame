@@ -2,6 +2,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import React, { useEffect, useRef, useState, useImperativeHandle } from "react";
 import styles from "./GameMain.module.css";
+import carImgFile from "./car.jpg";
+import wallImgFile from "./wall.jpg";
 
 type Props = {
   handPosition: string;
@@ -25,7 +27,13 @@ const CanvasGame: React.FC<Props> = (props) => {
   const [carX, setCarX] = useState(0);
   const [carY, setCarY] = useState(0);
   const obstacles = useRef<{ x: number; y: number }[]>([]);
+  const roadLine = useRef<{ y: number }[]>([]); //
   const roadOffset = useRef(0);
+
+  const carImgRef = useRef<HTMLImageElement | null>(null);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const wallImgRef = useRef<HTMLImageElement | null>(null);
+
 
   // game const
   const CELL_SIZE = 100;
@@ -37,10 +45,37 @@ const CanvasGame: React.FC<Props> = (props) => {
 
   let ROAD_X = 100; // resets below
 
+  useEffect(() => {
+    const img = new Image();
+    const imgWall = new Image();
+
+    img.src = carImgFile;
+    imgWall.src = wallImgFile;
+    img.onload = () => {
+      carImgRef.current = img;
+      setIsImageLoaded(true);
+    };
+    img.onerror = () => {
+      console.error("Failed to load car image");
+    };
+
+    imgWall.onload = () => {
+      wallImgRef.current = imgWall;
+    }
+    imgWall.onerror = () => {
+      console.error("Failed to load wall image");
+    };
+    
+  }, []);
+
   const generateObstacle = () => {
     const x = ROAD_X + Math.floor(Math.random() * ROAD_WIDTH) * CELL_SIZE;
     const y = -CELL_SIZE;
     obstacles.current.push({ x, y });
+  };
+  const generateRoadLine = () => {
+    const y = -CELL_SIZE*2;
+    roadLine.current.push({ y });
   };
 
   const checkCollision = () => {
@@ -117,6 +152,7 @@ const CanvasGame: React.FC<Props> = (props) => {
       if (roadOffset.current >= CELL_SIZE) {
         roadOffset.current = 0;
         generateObstacle();
+        generateRoadLine();
       }
 
       // для ручного управления
@@ -152,8 +188,12 @@ const CanvasGame: React.FC<Props> = (props) => {
       obstacles.current.forEach((obstacle) => {
         obstacle.y += ROAD_SPEED;
       });
+      roadLine.current.forEach((block) => {
+        block.y += ROAD_SPEED;
+      });
 
       obstacles.current = obstacles.current.filter((obstacle) => obstacle.y < canvas.height);
+      roadLine.current = roadLine.current.filter((block) => block.y < canvas.height);
 
       checkCollision();
     };
@@ -161,15 +201,32 @@ const CanvasGame: React.FC<Props> = (props) => {
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      ctx.fillStyle = "black";
+      ctx.fillRect(ROAD_X - CELL_SIZE/2, 0, CELL_SIZE, canvas.height);
+      ctx.fillRect(ROAD_X + ROAD_WIDTH * CELL_SIZE, 0, CELL_SIZE/2, canvas.height);
+
       ctx.fillStyle = "gray";
       ctx.fillRect(ROAD_X, 0, ROAD_WIDTH * CELL_SIZE, canvas.height);
 
-      ctx.fillStyle = "blue";
-      ctx.fillRect(carX, carY, CAR_SIZE, CAR_SIZE);
+      ctx.fillStyle = "white";
+      roadLine.current.forEach((block) => {
+        ctx.fillRect(ROAD_X + (ROAD_WIDTH / 2) * CELL_SIZE - CELL_SIZE / 8, block.y, CELL_SIZE / 4, CELL_SIZE / 2.5);
+      });
+      
+      if (isImageLoaded && carImgRef.current) {
+        ctx.drawImage(carImgRef.current, carX, carY, CAR_SIZE, CAR_SIZE);
+      } else {
+        ctx.fillStyle = "blue";
+        ctx.fillRect(carX, carY, CAR_SIZE, CAR_SIZE);
+      }
 
-      ctx.fillStyle = "red";
       obstacles.current.forEach((obstacle) => {
+      if (wallImgRef.current) {
+        ctx.drawImage(wallImgRef.current, obstacle.x, obstacle.y, CELL_SIZE, CELL_SIZE)
+      } else {
+        ctx.fillStyle = "red";
         ctx.fillRect(obstacle.x, obstacle.y, CELL_SIZE, CELL_SIZE);
+      }
       });
     };
 
@@ -199,7 +256,7 @@ const CanvasGame: React.FC<Props> = (props) => {
         document.removeEventListener("keydown", handleKeyDown);
       }
     };
-  }, [gameOver, gameStarted, gamePaused, direction, carX, carY, ROAD_X, CELL_SIZE, CAR_SIZE, ROAD_SPEED]);
+  }, [gameOver, gameStarted, gamePaused, direction, carX, carY, ROAD_X, CELL_SIZE, CAR_SIZE, ROAD_SPEED, isImageLoaded]);
 
   useImperativeHandle(props.ref, () => ({
     startGame: () => {
@@ -217,6 +274,7 @@ const CanvasGame: React.FC<Props> = (props) => {
       setDistance(0);
       obstacles.current = [];
       roadOffset.current = 0;
+      roadLine.current = [];
     },
   }));
 
