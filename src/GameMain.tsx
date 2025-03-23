@@ -1,9 +1,15 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import React, { useEffect, useRef, useState, useImperativeHandle } from "react";
 import styles from "./GameMain.module.css";
-import carImgFile from "./car.jpg";
-import wallImgFile from "./wall.jpg";
+
+import wallImgFile from "./images/wall.jpg";
+import car1 from "./images/car.jpg";
+import car2 from "./images/car2.jpg";
+import car3 from "./images/car3.jpg";
+import car4 from "./images/car4.jpg";
+import car5 from "./images/car5.jpg";
 
 type Props = {
   handPosition: string;
@@ -30,9 +36,16 @@ const CanvasGame: React.FC<Props> = (props) => {
   const roadLine = useRef<{ y: number }[]>([]); //
   const roadOffset = useRef(0);
 
-  const carImgRef = useRef<HTMLImageElement | null>(null);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const wallImgRef = useRef<HTMLImageElement | null>(null);
+  const carImagesRef = useRef<HTMLImageElement[]>([]);
+  const [isImagesLoaded, setImagesLoaded] = useState(false);
+  const carImagesPath = [
+    car1, // collisions= 0 and 1
+    car2,
+    car3,
+    car4,
+    car5, // collisions= 5
+  ];
 
 
   // game const
@@ -46,25 +59,40 @@ const CanvasGame: React.FC<Props> = (props) => {
   let ROAD_X = 100; // resets below
 
   useEffect(() => {
-    const img = new Image();
-    const imgWall = new Image();
+    const loadImages = async () => {
+      const carPromises = carImagesPath.map((src) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.src = src;
+          img.onload = () => {resolve(img);};
+          img.onerror = () => {reject(new Error(`Failed to load image: ${src}`));};
+        });
+      });
 
-    img.src = carImgFile;
-    imgWall.src = wallImgFile;
-    img.onload = () => {
-      carImgRef.current = img;
-      setIsImageLoaded(true);
-    };
-    img.onerror = () => {
-      console.error("Failed to load car image");
+      const wallPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+        const imgWall = new Image();
+        imgWall.src = wallImgFile;
+        imgWall.onload = () => {resolve(imgWall)};
+        imgWall.onerror = () => {reject(new Error(`Failed to load wall image`))};
+      });
+
+      try {
+        const [loadedImages, loadedWall] = await Promise.all([
+          Promise.all(carPromises),
+          wallPromise, 
+        ]);
+
+        carImagesRef.current = loadedImages as HTMLImageElement[];
+        wallImgRef.current = loadedWall;
+        setImagesLoaded(true);
+
+
+      } catch (error) {
+        console.error(error);
+      }
     };
 
-    imgWall.onload = () => {
-      wallImgRef.current = imgWall;
-    }
-    imgWall.onerror = () => {
-      console.error("Failed to load wall image");
-    };
+    loadImages();
     
   }, []);
 
@@ -213,8 +241,13 @@ const CanvasGame: React.FC<Props> = (props) => {
         ctx.fillRect(ROAD_X + (ROAD_WIDTH / 2) * CELL_SIZE - CELL_SIZE / 8, block.y, CELL_SIZE / 4, CELL_SIZE / 2.5);
       });
       
-      if (isImageLoaded && carImgRef.current) {
-        ctx.drawImage(carImgRef.current, carX, carY, CAR_SIZE, CAR_SIZE);
+      // повреждения с каждым столкновением
+      let currentCarImage = carImagesRef.current[0]
+      if (collisions > 0) {
+         currentCarImage = carImagesRef.current[collisions-1];
+      }
+      if (isImagesLoaded) {
+        ctx.drawImage(currentCarImage, carX, carY, CAR_SIZE, CAR_SIZE);
       } else {
         ctx.fillStyle = "blue";
         ctx.fillRect(carX, carY, CAR_SIZE, CAR_SIZE);
@@ -256,7 +289,7 @@ const CanvasGame: React.FC<Props> = (props) => {
         document.removeEventListener("keydown", handleKeyDown);
       }
     };
-  }, [gameOver, gameStarted, gamePaused, direction, carX, carY, ROAD_X, CELL_SIZE, CAR_SIZE, ROAD_SPEED, isImageLoaded]);
+  }, [gameOver, gameStarted, gamePaused, direction, carX, carY, ROAD_X, CELL_SIZE, CAR_SIZE, ROAD_SPEED, isImagesLoaded]);
 
   useImperativeHandle(props.ref, () => ({
     startGame: () => {
@@ -284,7 +317,7 @@ const CanvasGame: React.FC<Props> = (props) => {
         <div className={styles.gameHeader}>Real Groove</div>
         <hr></hr>
         <div className={styles.distance}>Distance: {Math.round(distance / 10)}m</div>
-        <div className={styles.collisions}>Collisions: {collisions}/5</div>
+        <div className={styles.collisions}>Life: {(collisions <= 5 ? (5-collisions) : 0)/5*100}%</div>
       </div>
 
       <canvas ref={canvasRef} className={styles.road} />
