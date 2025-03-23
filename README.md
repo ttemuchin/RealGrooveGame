@@ -4,4 +4,4 @@ You need to prepare your webcamera to direct the car with your arm!
 
 All in all it is quite basic usage of MediaPipe
 
-![alt text](https://github.com/ttemuchin/RealGrooveGame/blob/deign/demo.png?raw=true)
+![alt text](https://github.com/ttemuchin/RealGrooveGame/blob/design/demo.png?raw=true)
